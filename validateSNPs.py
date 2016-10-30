@@ -10,7 +10,6 @@ script,sample,baseDir,minCov,pct,outFile = argv
 minCov = int(minCov)
 pct = float(pct)
 tabix = "/home/jody/software/bcftools-1.3.1/htslib-1.3.1/tabix"
-snps = json.loads(open("snps.json","r").readline().rstrip())
 covFile = baseDir+"/coverage/"+sample+".coverage.gz"
 covCMD = Popen([tabix,covFile,"-T","snps.bed"],stdout=PIPE)
 
