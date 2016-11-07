@@ -6,7 +6,11 @@ from subprocess import PIPE,Popen
 import os
 import re 
 
+
 script,sample,refFile,baseDir,cutoff,pct,outFile = argv
+
+scriptDir = os.path.dirname(os.path.realpath(__file__))
+
 
 pct = float(pct)
 FNULL = open(os.devnull, 'w') # for the stderr
@@ -20,72 +24,81 @@ ofCalls = open(outFile,"w")
 ofCalls.write("%s\n" % sample)
 
 def callDel(res):
-	arr = []
-	for l in res.split("\n"):
-		if l=="":
-			break
-		tot = l.split("\t")[2]
-		indel = l.split("\t")[2]
-		arr.append(int(tot))
-	meanCov = reduce(lambda x, y: x + y, arr) / float(len(arr))
-	if meanCov>cutoff:
+	arr = res.rstrip().split("\t")
+
+	if len(arr)<2:
+		return "NA"
+	pileup = arr[4]
+	if len(pileup)<cutoff:
+		return "NA"
+	insReads = len(re.findall("\-[0-9]+[ACGTNacgtn]+",pileup))
+	refReads = len(re.findall("[.,]",pileup)) - insReads
+
+	
+	if (insReads==0) and (refReads>cutoff):
+		return "0"
+	elif (insReads==0) and (refReads<cutoff):
+		return "NA"
+	
+	test = float(insReads)/(float(insReads)+float(refReads))
+
+	if test > pct:
+		return "1"
+	elif (1-test) > pct:
 		return "0"
 	else:
-		return "1"
+		return "NA"
+
 		
 def callInd(res):
 	arr = res.rstrip().split("\t")
+	
+
 	if len(arr)<2:
-		return "N"
+		return "NA"
 	pileup = arr[4]
-	print pileup
-	if len(pileup)<10:
-		print "NAN"
-		return "N"
+	if len(pileup)<cutoff:
+		return "NA"
 	insReads = len(re.findall("\+[0-9]+[ACGTNacgtn]+",pileup))
 	refReads = len(re.findall("[.,]",pileup)) - insReads
 
-	if (insReads==0) and (refReads>10):
-		return "1"
-	elif (insReads==0) and (refReads<10):
-		return "N"
+	if (insReads==0) and (refReads>cutoff):
+		return "0"
+	elif (insReads==0) and (refReads<cutoff):
+		return "NA"
 
-	print insReads
-	print refReads
 	test = float(insReads)/(float(insReads)+float(refReads))
 	if test > pct:
-		print "True"
 		return "1"
-	else:
-		print "False"
+	elif (1-test) > pct:
 		return "0"
+	else:
+		return "NA"
 
-for chr in indels:
-	for var in indels[chr]:
-		print "-"*80
+dict_pileup = {}
+chr_set = set()
+bamFile = baseDir+"/bam/"+sample+".bam"
+p1 = Popen(["samtools", "view", "-b",bamFile,"-L","indels.bed"],stderr=FNULL,stdout=PIPE)
+p2 = Popen(["samtools","mpileup","-f",refFile,"-"],stdin=p1.stdout,stderr=FNULL,stdout=PIPE)
+p1.stdout.close()
+p3 = Popen(["python",scriptDir+"/filterPileup.py","indels.json"],stdin=p2.stdout,stderr=FNULL,stdout=PIPE)
+p2.stdout.close()
+for line in p3.stdout:
+	chr,pos = line.split()[:2]
+	if chr not in chr_set:
+		chr_set.add(chr)
+		dict_pileup[chr] = {}
+	dict_pileup[chr][pos] = line.rstrip()
+
+for chrom in indels:
+	for var in indels[chrom]:
+		if var["pos"] not in dict_pileup[chrom]:
+			ofCalls.write("%s\n" % "NA")
+			continue
+		res = dict_pileup[chrom][var["pos"]]
 		if var["type"]=="deletion":
-			indelLen = len(var["ref"])
-			posEnd = int(var["pos"])+indelLen
-			locus = "%s:%s-%s" % (chr,var["pos"],str(posEnd))
-			print locus
-			covCMD = Popen([tabix,covFile,locus],stdout=PIPE)
-			res = covCMD.communicate()[0]
 			ofCalls.write("%s\n" % callDel(res))
 		elif var["type"]=="insertion":
-			bamFile = baseDir+"/bam/"+sample+".bam"
-			locus = chr+":"+var["pos"]+"-"+var["pos"]
-			print locus
-			p1 = Popen(["samtools", "view", "-b",bamFile,locus],stderr=FNULL,stdout=PIPE)
-			p2 = Popen(["samtools","mpileup","-f",refFile,"-"],stdin=p1.stdout,stderr=FNULL,stdout=PIPE)
-			p1.stdout.close()
-			p3 = Popen(["grep",var["pos"]],stdin=p2.stdout,stderr=FNULL,stdout=PIPE)
-			p2.stdout.close()
-			res = p3.communicate()[0]
 			ofCalls.write("%s\n" % callInd(res))
 
-#for l in covCMD.communicate()[0].split("\n"):
-#	if l=="":
-#		continue
-#	chr,pos  = l.split("\t")[:2]	
-#	allele = callAllele(minCov,pct,l)
-#	ofCalls.write("%s\n" % (allele))
+

@@ -4,7 +4,6 @@ import gzip
 import json
 from subprocess import PIPE,Popen
 
-
 script,sample,baseDir,minCov,pct,outFile = argv
 
 minCov = int(minCov)
@@ -17,7 +16,7 @@ ofCalls = open(outFile,"w")
 ofCalls.write("%s\n" % sample)
 
 def callAllele(minCov,pct,l):
-	chr,pos,tot,a,c,g,t,deletion,refskip,sample = l.split("\t")
+	chrom,pos,tot,a,c,g,t,deletion,refskip,sample = l.split("\t")
 	pos,tot,a,c,g,t = map(lambda x:int(x),[pos,tot,a,c,g,t])
 	if tot<minCov:
 		return "-"
@@ -30,7 +29,6 @@ def callAllele(minCov,pct,l):
 	allele = ""
 	for nuc in nucObj:
 		if nucObj[nuc]>=cutoff:
-			print("%s %s %s %s" % (chr,pos,nuc,+nucObj[nuc]))
 			allele = allele+nuc
 	if allele=="":
 		allele = "N"
@@ -39,6 +37,6 @@ def callAllele(minCov,pct,l):
 for l in covCMD.communicate()[0].split("\n"):
 	if l=="":
 		continue
-	chr,pos  = l.split("\t")[:2]	
+	chrom,pos  = l.split("\t")[:2]	
 	allele = callAllele(minCov,pct,l)
 	ofCalls.write("%s\n" % (allele))
