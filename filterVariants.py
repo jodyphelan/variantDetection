@@ -16,7 +16,7 @@ import subprocess
 ### Global variables
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 pltvals = []
-
+meta_col_num = 5
 
 
 def loadSampleFile(sampleFile):
@@ -107,10 +107,11 @@ def indels2bed(indels):
 
 def variants2txt(outname,vars):
 	ofTxt = open(outname,"w")
-	ofTxt.write("chr\tpos\tref\n")
+	ofTxt.write("chr\tpos\tref\tid\ttype\n")
 	for chr in vars:
 		for var in vars[chr]:
-			ofTxt.write("%s\t%s\t%s\t%s\n" % (chr,var["pos"],var["ref"],var["type"]))
+			var_id = "."
+			ofTxt.write("%s\t%s\t%s\t%s\t%s\n" % (chr,var["pos"],var["ref"][0],var_id,var["type"]))
 
 def getCalls(sampleFile,baseDir,refFile,depth_cut,pct_cut):
 	os.system("cat %s | xargs -i -P20 sh -c \"%s/validateSNPs.py {} %s %s %s {}.snpCalls\"" % (sampleFile,scriptDir,baseDir,depth_cut,pct_cut))
@@ -138,15 +139,16 @@ def calls2mat(samples,prefix):
 	indelFiles = "indels.txt "+indelFiles
 	os.system("paste %s > %s" % (snpFiles,"raw.snp.mat"))
 	os.system("paste %s > %s" % (indelFiles,"raw.indel.mat"))
+#	mat2bin("%s.snps.mat" % prefix,"%s.snps.mat.bin" % prefix)
+#	mat2bin("raw.snp.mat","raw.snp.mat.bin")
 	matRemoveMono("raw.snp.mat","%s.snps.mat" % prefix)
 	matRemoveMono("raw.indel.mat","%s.indels.mat" % prefix)
-	mat2bin("%s.snps.mat" % prefix,"%s.snps.mat.bin" % prefix)
 
 def testMulti(line):
 	tempArr = line.split("\t")
-	for i in range(4):
+	for i in range(meta_col_num):
 		tempArr.pop(0)
-	if len(set(tempArr) - set(["-","N"]))>1:
+	if len(set(tempArr) - set(["-","N","NA"]))>1:
 		return True
 	else:
 		return False
@@ -187,11 +189,11 @@ def mat2bin(inFile,outFile):
 		for i in tqdm(range(file_len(inFile)-1)): 
 		        l = f.readline().rstrip()
 			arr = l.split("\t")
-			for i in range(4,len(arr)):
-				if len(arr[i])>1:
-					arr[i] = "0.5"
-				elif arr[i]=="-" or arr[i]=="N" or arr[i]=="NA":
+			for i in range(meta_col_num,len(arr)):
+				if arr[i]=="-" or arr[i]=="N" or arr[i]=="NA":
 					arr[i] = "NA"
+				elif len(arr[i])>1:
+					arr[i] = "0.5"
 				elif arr[i]==arr[2]:
 					arr[i] = "0"
 				elif arr[i] in (set(["A","C","G","T"])-set([arr[2]])):
@@ -214,8 +216,11 @@ def varStats(infile):
 		f.readline()
 		for i in tqdm(range(file_len(infile)-1)):
 			arr = f.readline().rstrip().split("\t")
-			pct_NA = len(filter(lambda x: x=="NA", arr[4:]))/len(arr[4:])
-			pct_MX = len(filter(lambda x: x=="0.5", arr[4:]))/len(arr[4:])
+			pct_NA = len(filter(lambda x: x=="NA", arr[meta_col_num:]))/len(arr[meta_col_num:])
+			if arr[4]=="SNP":
+				pct_MX = len(filter(lambda x: x!="NA" and  len(x)>1, arr[meta_col_num:]))/len(arr[meta_col_num:])
+			else:
+				pct_MX = 0 ######## Dont filter mixed values based in indels #############
 			arr_pct_NA.append(pct_NA)
 			arr_pct_MX.append(pct_MX)
 	arr_pct_NA.sort()
@@ -234,15 +239,15 @@ def sampleStats(infile):
 	header = []
 	with open(infile) as f:
 		header = f.readline().rstrip().split("\t")
-		for i in range(4,len(header)):
+		for i in range(meta_col_num,len(header)):
 			dict_num_NA[header[i]] = 0
 			dict_num_MX[header[i]] = 0
 		for i in tqdm(range(file_len(infile)-1)):
 			arr = f.readline().rstrip().split("\t")
-			for j in range(4,len(header)):
+			for j in range(meta_col_num,len(header)):
 				if arr[j] == "NA":
 					dict_num_NA[header[j]] += 1
-				elif arr[j]=="0.5":
+				elif arr[j]!="NA" and len(arr[j])>1:
 					dict_num_MX[header[j]] += 1
 	dict_pct_NA = {}
 	arr_pct_NA = [] 
@@ -288,8 +293,8 @@ def filterSNPs(infile,outfile,na_cut,mx_cut):
 		for i in tqdm(range(file_len(infile)-1)):
 			line = f.readline()
 			arr = line.rstrip().split("\t")
-			pct_NA = len(filter(lambda x: x=="NA", arr))/len(arr[4:])
-			pct_MX = len(filter(lambda x: x=="0.5", arr))/len(arr[4:])
+			pct_NA = len(filter(lambda x: x=="NA", arr))/len(arr[meta_col_num:])
+			pct_MX = len(filter(lambda x: x=="0.5", arr))/len(arr[meta_col_num:])
 			if float(pct_NA)>float(na_cut):
 				filtering_results["na"].append((arr[0],arr[1]))
 			elif float(pct_MX)>float(mx_cut):
@@ -301,7 +306,7 @@ def filterSNPs(infile,outfile,na_cut,mx_cut):
 				o.write(line)
 	open("variantFiltering.json","w").write(json.dumps(filtering_results))
 
-def sampleFilter(infile,outfile,na_cut,mx_cut):
+def sampleFilter(na_cut,mx_cut):
 	header = []
 	samples_fail = set()
 	sample_stats = json.loads(open("sampleStats.json").readline())
@@ -319,9 +324,9 @@ def sampleFilter(infile,outfile,na_cut,mx_cut):
 	samples_pass = samples-samples_fail
 	for s in samples_pass:
 		filtering_results["pass"].append(s)
-	print samples_pass
+	print sorted(list(samples_pass))
 	open("sampleFiltering.json","w").write(json.dumps(filtering_results))
-	calls2mat(list(samples_pass),"sample.filt")
+	calls2mat(sorted(list(samples_pass)),"sample.filt")
 
 
 def loadMappability(infile):
@@ -344,13 +349,13 @@ def wrapMap(args):
 
 def wrapStats(args):
 	print "Computing sample stats"
-	sample_na_cut,sample_mx_cut = 0.05,0.05
-#	sample_na_cut,sample_mx_cut = sampleStats("unfiltered.snps.mat.bin")
+#	sample_na_cut,sample_mx_cut = 0.05,0.05
+	sample_na_cut,sample_mx_cut = sampleStats("unfiltered.snps.mat")
 	print "Filtering with sample Missing-cutoff:%s and Mixed-cutoff:%s " % (sample_na_cut,sample_mx_cut)
-	sampleFilter("unfiltered.snps.mat.bin","sample.filt.mat",sample_na_cut,sample_mx_cut)
-	mergeMatrices("sample.filt.indels.mat","sample.filt.snps.mat.bin","sample.filt.mat.bin")
-	var_na_cut,var_mx_cut =0.05,0.05
-#	var_na_cut,var_mx_cut = varStats("sample.filt.mat.bin")
+	sampleFilter(sample_na_cut,sample_mx_cut)
+	mergeMatrices("sample.filt.indels.mat","sample.filt.snps.mat","sample.filt.mat.bin")
+#	var_na_cut,var_mx_cut =0.05,0.05
+	var_na_cut,var_mx_cut = varStats("sample.filt.mat.bin")
 
 	print "Filtering with variant Missing-cutoff:%s and Mixed-cutoff:%s " % (var_na_cut,var_mx_cut)
 	filterSNPs("sample.filt.mat.bin","variant.sample.filt.mat",var_na_cut,var_mx_cut)

@@ -19,7 +19,7 @@ def callAllele(minCov,pct,l):
 	chrom,pos,tot,a,c,g,t,deletion,refskip,sample = l.split("\t")
 	pos,tot,a,c,g,t = map(lambda x:int(x),[pos,tot,a,c,g,t])
 	if tot<minCov:
-		return "-"
+		return "NA"
 	cutoff = 0
 	if tot==minCov:
 		cutoff = minCov
@@ -31,7 +31,7 @@ def callAllele(minCov,pct,l):
 		if nucObj[nuc]>=cutoff:
 			allele = allele+nuc
 	if allele=="":
-		allele = "N"
+		allele = "NA"
 	return allele
 
 for l in covCMD.communicate()[0].split("\n"):

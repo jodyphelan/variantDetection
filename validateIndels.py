@@ -1,11 +1,11 @@
-#! /usr/bin/python
+#! /home/jody/software/anaconda2/bin/python
 from sys import argv
 import gzip
 import json
 from subprocess import PIPE,Popen
 import os
 import re 
-
+from collections import Counter
 
 script,sample,refFile,baseDir,cutoff,pct,outFile = argv
 
@@ -31,21 +31,27 @@ def callDel(res):
 	pileup = arr[4]
 	if len(pileup)<cutoff:
 		return "NA"
-	insReads = len(re.findall("\-[0-9]+[ACGTNacgtn]+",pileup))
+	insArr = re.findall("\+[0-9]+[ACGTNacgtn]+",pileup)
+	insReads = len(insArr)
 	refReads = len(re.findall("[.,]",pileup)) - insReads
 
 	
-	if (insReads==0) and (refReads>cutoff):
-		return "0"
+	if (insReads==0) and (refReads>=cutoff):
+		return arr[2]
 	elif (insReads==0) and (refReads<cutoff):
 		return "NA"
 	
+	cnt = Counter()
+	for s in [x.upper() for  x in insArr]:
+		cnt[s]+=1
+	indel_seq = cnt.most_common(1)[0][0]
+
 	test = float(insReads)/(float(insReads)+float(refReads))
 
 	if test > pct:
-		return "1"
+		return indel_seq
 	elif (1-test) > pct:
-		return "0"
+		return arr[2]
 	else:
 		return "NA"
 
@@ -59,19 +65,26 @@ def callInd(res):
 	pileup = arr[4]
 	if len(pileup)<cutoff:
 		return "NA"
-	insReads = len(re.findall("\+[0-9]+[ACGTNacgtn]+",pileup))
+	insArr = re.findall("\+[0-9]+[ACGTNacgtn]+",pileup)
+	insReads = len(insArr)
 	refReads = len(re.findall("[.,]",pileup)) - insReads
 
-	if (insReads==0) and (refReads>cutoff):
-		return "0"
+	if (insReads==0) and (refReads>=cutoff):
+		return arr[2]
 	elif (insReads==0) and (refReads<cutoff):
 		return "NA"
 
+	cnt = Counter()
+	for s in [x.upper() for  x in insArr]:
+		cnt[s]+=1
+	indel_seq = cnt.most_common(1)[0][0]
+
 	test = float(insReads)/(float(insReads)+float(refReads))
+	
 	if test > pct:
-		return "1"
+		return indel_seq
 	elif (1-test) > pct:
-		return "0"
+		return arr[2]
 	else:
 		return "NA"
 
