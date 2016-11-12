@@ -143,6 +143,7 @@ def calls2mat(samples,prefix):
 #	mat2bin("raw.snp.mat","raw.snp.mat.bin")
 	matRemoveMono("raw.snp.mat","%s.snps.mat" % prefix)
 	matRemoveMono("raw.indel.mat","%s.indels.mat" % prefix)
+	subprocess.call("rm *TempMat",shell=True)	
 
 def testMulti(line):
 	tempArr = line.split("\t")
@@ -196,7 +197,9 @@ def mat2bin(inFile,outFile):
 					arr[i] = "0.5"
 				elif arr[i]==arr[2]:
 					arr[i] = "0"
-				elif arr[i] in (set(["A","C","G","T"])-set([arr[2]])):
+				elif arr[4] == "SNP" and arr[i] in (set(["A","C","G","T"])-set([arr[2]])):
+					arr[i] = "1"
+				elif arr[4] != "SNP":   #### might want to be more specific
 					arr[i] = "1"
 				else:
 					print arr[i]
@@ -349,16 +352,16 @@ def wrapMap(args):
 
 def wrapStats(args):
 	print "Computing sample stats"
-#	sample_na_cut,sample_mx_cut = 0.05,0.05
-	sample_na_cut,sample_mx_cut = sampleStats("unfiltered.snps.mat")
+	sample_na_cut,sample_mx_cut = 0.05,0.05
+#	sample_na_cut,sample_mx_cut = sampleStats("unfiltered.snps.mat")
 	print "Filtering with sample Missing-cutoff:%s and Mixed-cutoff:%s " % (sample_na_cut,sample_mx_cut)
 	sampleFilter(sample_na_cut,sample_mx_cut)
-	mergeMatrices("sample.filt.indels.mat","sample.filt.snps.mat","sample.filt.mat.bin")
-#	var_na_cut,var_mx_cut =0.05,0.05
-	var_na_cut,var_mx_cut = varStats("sample.filt.mat.bin")
+	mergeMatrices("sample.filt.indels.mat","sample.filt.snps.mat","sample.filt.mat")
+	var_na_cut,var_mx_cut =0.05,0.05
+#	var_na_cut,var_mx_cut = varStats("sample.filt.mat.bin")
 
 	print "Filtering with variant Missing-cutoff:%s and Mixed-cutoff:%s " % (var_na_cut,var_mx_cut)
-	filterSNPs("sample.filt.mat.bin","variant.sample.filt.mat",var_na_cut,var_mx_cut)
+	filterSNPs("sample.filt.mat","variant.sample.filt.mat",var_na_cut,var_mx_cut)
 
 def mergeMatrices(file1,file2,file3):
 	subprocess.call("cat %s %s | sort -k1,1 -k2,2n  | uniq > %s" % (file1,file2,file3),shell=True)
@@ -392,6 +395,13 @@ def plotData(args):
 
 	open("plot_data.json","w").write(json.dumps(results))
 
+def cleanup(args):
+	print "Cleaning up"
+	print os.path.isdir("call")
+	if not os.path.isdir("calls"):
+		subprocess.call("mkdir calls",shell=True)
+	subprocess.call("mv *Calls calls",shell=True)
+
 parser = argparse.ArgumentParser(description='Python wrapper to filter variants',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers(help="Task to perform")
 
@@ -422,6 +432,9 @@ parser_raw.set_defaults(func=wrapMerge)
 parser_raw = subparsers.add_parser('map', help='Generate raw unfiltered matrix', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_raw.add_argument('infile',help='RefFile')
 parser_raw.set_defaults(func=wrapMap)
+
+parser_raw = subparsers.add_parser('cleanup', help='Generate raw unfiltered matrix', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser_raw.set_defaults(func=cleanup)
 
 
 args = parser.parse_args()
