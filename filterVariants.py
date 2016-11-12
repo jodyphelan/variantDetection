@@ -256,6 +256,7 @@ def sampleStats(infile):
 	arr_pct_NA = [] 
 	dict_pct_MX = {}
 	arr_pct_MX = []
+	i += 1 ## because the i enumerate starts at 0 we need to add one
 	for sample in dict_num_NA:
 		dict_pct_NA[sample] = dict_num_NA[sample]/i
 		arr_pct_NA.append(dict_num_NA[sample]/i)
@@ -327,7 +328,6 @@ def sampleFilter(na_cut,mx_cut):
 	samples_pass = samples-samples_fail
 	for s in samples_pass:
 		filtering_results["pass"].append(s)
-	print sorted(list(samples_pass))
 	open("sampleFiltering.json","w").write(json.dumps(filtering_results))
 	calls2mat(sorted(list(samples_pass)),"sample.filt")
 
@@ -392,6 +392,15 @@ def plotData(args):
 	results["sampleFilter"]["values"].append(len(sample_filter["pass"]))
 	results["sampleFilter"]["values"].append(len(sample_filter["na"]))
 	results["sampleFilter"]["values"].append(len(sample_filter["mx"]))
+
+	with open("sampleStats.txt","w") as o:
+		for s in sample_filter["pass"]:
+			o.write(str(s)+"\t"+str(sample_stats["na"][s])+"\tPASS\n")
+		for s in sample_filter["na"]:
+			o.write(str(s)+"\t"+str(sample_stats["na"][s])+"\tFAIL-NA\n")
+		for s in sample_filter["mx"]:
+			o.write(str(s)+"\t"+str(sample_stats["na"][s])+"\tFAIL-MX\n")
+
 
 	open("plot_data.json","w").write(json.dumps(results))
 
