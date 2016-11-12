@@ -31,7 +31,7 @@ def callDel(res):
 	pileup = arr[4]
 	if len(pileup)<cutoff:
 		return "NA"
-	insArr = re.findall("\+[0-9]+[ACGTNacgtn]+",pileup)
+	insArr = re.findall("\-[0-9]+[ACGTNacgtn]+",pileup)
 	insReads = len(insArr)
 	refReads = len(re.findall("[.,]",pileup)) - insReads
 
@@ -40,7 +40,9 @@ def callDel(res):
 		return arr[2]
 	elif (insReads==0) and (refReads<cutoff):
 		return "NA"
-	
+	elif insReads<float(pct)*float(cutoff):
+		return "NA"
+
 	cnt = Counter()
 	for s in [x.upper() for  x in insArr]:
 		cnt[s]+=1
@@ -68,10 +70,12 @@ def callInd(res):
 	insArr = re.findall("\+[0-9]+[ACGTNacgtn]+",pileup)
 	insReads = len(insArr)
 	refReads = len(re.findall("[.,]",pileup)) - insReads
-
+	
 	if (insReads==0) and (refReads>=cutoff):
 		return arr[2]
 	elif (insReads==0) and (refReads<cutoff):
+		return "NA"
+	elif insReads<float(pct)*float(cutoff):
 		return "NA"
 
 	cnt = Counter()
@@ -79,7 +83,10 @@ def callInd(res):
 		cnt[s]+=1
 	indel_seq = cnt.most_common(1)[0][0]
 
-	test = float(insReads)/(float(insReads)+float(refReads))
+	try:
+		test = float(insReads)/(float(insReads)+float(refReads))
+	except:
+		print pileup
 	
 	if test > pct:
 		return indel_seq

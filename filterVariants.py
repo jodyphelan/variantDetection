@@ -298,12 +298,12 @@ def filterSNPs(infile,outfile,na_cut,mx_cut):
 			arr = line.rstrip().split("\t")
 			pct_NA = len(filter(lambda x: x=="NA", arr))/len(arr[meta_col_num:])
 			pct_MX = len(filter(lambda x: x=="0.5", arr))/len(arr[meta_col_num:])
-			if float(pct_NA)>float(na_cut):
+			if int(arr[1]) in dict_map[arr[0]]:
+				filtering_results["map"].append((arr[0],arr[1]))
+			elif float(pct_NA)>float(na_cut):
 				filtering_results["na"].append((arr[0],arr[1]))
 			elif float(pct_MX)>float(mx_cut):
 				filtering_results["mx"].append((arr[0],arr[1]))
-			elif arr[1] in dict_map[arr[0]]:
-				filtering_results["map"].append((arr[0],arr[1]))
 			else:
 				filtering_results["pass"].append((arr[0],arr[1]))
 				o.write(line)
@@ -352,13 +352,13 @@ def wrapMap(args):
 
 def wrapStats(args):
 	print "Computing sample stats"
-	sample_na_cut,sample_mx_cut = 0.05,0.05
-#	sample_na_cut,sample_mx_cut = sampleStats("unfiltered.snps.mat")
+#	sample_na_cut,sample_mx_cut = 0.05,0.05
+	sample_na_cut,sample_mx_cut = sampleStats("unfiltered.snps.mat")
 	print "Filtering with sample Missing-cutoff:%s and Mixed-cutoff:%s " % (sample_na_cut,sample_mx_cut)
 	sampleFilter(sample_na_cut,sample_mx_cut)
 	mergeMatrices("sample.filt.indels.mat","sample.filt.snps.mat","sample.filt.mat")
-	var_na_cut,var_mx_cut =0.05,0.05
-#	var_na_cut,var_mx_cut = varStats("sample.filt.mat.bin")
+#	var_na_cut,var_mx_cut =0.05,0.05
+	var_na_cut,var_mx_cut = varStats("sample.filt.mat")
 
 	print "Filtering with variant Missing-cutoff:%s and Mixed-cutoff:%s " % (var_na_cut,var_mx_cut)
 	filterSNPs("sample.filt.mat","variant.sample.filt.mat",var_na_cut,var_mx_cut)
@@ -381,17 +381,17 @@ def plotData(args):
 	results["varStats"]["mx"] = json.loads(open("varStats.json").readline())["mx"]
 	var_filter = json.loads(open("variantFiltering.json").readline())
 
-	results["varFilter"] = {}
-	results["varFilter"]["pass"] = len(var_filter["pass"])
-	results["varFilter"]["na"] = len(var_filter["na"])
-	results["varFilter"]["mx"] = len(var_filter["mx"])
-	results["varFilter"]["map"] = len(var_filter["map"])
+	results["varFilter"] = {"labels": ["pass","na","mx","map"],"values":[]}
+	results["varFilter"]["values"].append(len(var_filter["pass"]))
+	results["varFilter"]["values"].append(len(var_filter["na"]))
+	results["varFilter"]["values"].append(len(var_filter["mx"]))
+	results["varFilter"]["values"].append(len(var_filter["map"]))
 	
 	sample_filter = json.loads(open("sampleFiltering.json").readline())
-	results["sampleFilter"] = {}
-	results["sampleFilter"]["pass"] = len(sample_filter["pass"])
-	results["sampleFilter"]["na"] = len(sample_filter["na"])
-	results["sampleFilter"]["mx"] = len(sample_filter["mx"])
+	results["sampleFilter"] = {"labels": ["pass","na","mx"],"values":[]}
+	results["sampleFilter"]["values"].append(len(sample_filter["pass"]))
+	results["sampleFilter"]["values"].append(len(sample_filter["na"]))
+	results["sampleFilter"]["values"].append(len(sample_filter["mx"]))
 
 	open("plot_data.json","w").write(json.dumps(results))
 
