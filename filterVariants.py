@@ -31,7 +31,7 @@ def parseVCF(samples,baseDir):
 	variants = {}
 	for i in tqdm(range(len(samples))):
 		sample = samples[i]
-	        f = gzip.open(baseDir+"/vcf/"+sample+".filt.vcf.gz","rb")
+	        f = gzip.open(baseDir+"/vcf/"+sample+".vcf.gz","rb")
 		for line in f.readlines():
 			if line[0] == "#":
 				continue

@@ -2,7 +2,9 @@
 from sys import argv
 import gzip
 import json
+import os
 from subprocess import PIPE,Popen
+import subprocess
 
 script,sample,baseDir,minCov,pct,outFile = argv
 
@@ -10,6 +12,9 @@ minCov = int(minCov)
 pct = float(pct)
 tabix = "/home/jody/software/bcftools-1.3.1/htslib-1.3.1/tabix"
 covFile = baseDir+"/coverage/"+sample+".coverage.gz"
+if not os.path.isfile(covFile+".tbi"):
+	tabix_cmd = tabix + " -0 -b 2 -e 2 -s 1 -S 1 "+covFile
+	subprocess.call(tabix_cmd,shell=True)
 covCMD = Popen([tabix,covFile,"-T","snps.bed"],stdout=PIPE)
 
 ofCalls = open(outFile,"w")
