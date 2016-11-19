@@ -1,4 +1,4 @@
-#! /home/jody/software/anaconda2/bin/python
+#! /Users/jody/anaconda2/bin/python
 from sys import argv
 import gzip
 import json
