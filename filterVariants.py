@@ -1,4 +1,4 @@
-#! /Users/jody/anaconda2/bin/python
+#! /home/jody//software/anaconda2/bin/python 
 from __future__ import division
 import os
 import argparse

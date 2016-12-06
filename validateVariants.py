@@ -1,3 +1,4 @@
+#! /home/jody/software/anaconda2/bin/python
 import json
 import sys
 from subprocess import Popen,PIPE
@@ -8,7 +9,7 @@ if len(sys.argv)<6:
 	quit()
 
 script,sample,base_dir,min_cov,pct,out = sys.argv
-tabix = "/Users/jody/software/samtools-1.3.1/htslib-1.3.1/tabix"
+tabix = "/home/jody/software/samtools-1.3.1/htslib-1.3.1/tabix"
 min_cov = int(min_cov)
 pct = float(pct)
 covFile = base_dir+"/pileup/"+sample+".pileup.gz"
