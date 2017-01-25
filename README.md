@@ -14,7 +14,7 @@ make
 cd ../
 ```
 
-### usage
+### Usage
 
 To run the pipeline you will need VCFs and a special pileup file (created using htsbox).
 They should be deposited in folders named fastq and pileup.
