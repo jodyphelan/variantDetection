@@ -1,0 +1,2 @@
+cd htslib
+make

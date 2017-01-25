@@ -9,7 +9,8 @@ if len(sys.argv)<6:
 	quit()
 
 script,sample,base_dir,min_cov,pct,out = sys.argv
-tabix = "/home/jody/software/samtools-1.3.1/htslib-1.3.1/tabix"
+scriptDir = os.path.dirname(os.path.realpath(__file__))
+tabix = scriptDir+"htslib/tabix"
 min_cov = int(min_cov)
 pct = float(pct)
 covFile = base_dir+"/pileup/"+sample+".pileup.gz"
