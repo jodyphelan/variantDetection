@@ -3,8 +3,8 @@
 This is a toolkit to perform population based filtering of variants called from NGS data
 
 ### Prerequisites
-* python
-* tqdm (python module)
+* python2.7
+* tqdm (python module; install using ```pip install tqdm```)
 
 ### Installation
 ```
