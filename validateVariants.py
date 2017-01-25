@@ -3,7 +3,7 @@ import json
 import sys
 from subprocess import Popen,PIPE
 from collections import defaultdict
-
+import os
 if len(sys.argv)<6:
 	print "validateVariants.py <sample> <base_dir> <min_cov> <pct_reads> <outfile>"
 	quit()
@@ -13,8 +13,21 @@ tabix = "/home/jody/software/samtools-1.3.1/htslib-1.3.1/tabix"
 min_cov = int(min_cov)
 pct = float(pct)
 covFile = base_dir+"/pileup/"+sample+".pileup.gz"
+
+def index_file(infile):
+	tbi = infile+".tbi"
+	if not os.path.isfile(tbi):
+		import subprocess
+		subprocess.call("%s -b 2 -e 2 -s 1 %s" % (tabix,infile),shell=True)
+
+index_file(covFile)
+
+
+
+
 variants = json.loads(open("variants.json").readline())
 covCMD = Popen([tabix,covFile,"-T","variants.bed"],stdout=PIPE)
+
 
 final_calls = defaultdict(dict)
 chromosomes = []
