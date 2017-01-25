@@ -10,7 +10,7 @@ if len(sys.argv)<6:
 
 script,sample,base_dir,min_cov,pct,out = sys.argv
 scriptDir = os.path.dirname(os.path.realpath(__file__))
-tabix = scriptDir+"htslib/tabix"
+tabix = scriptDir+"/htslib/tabix"
 min_cov = int(min_cov)
 pct = float(pct)
 covFile = base_dir+"/pileup/"+sample+".pileup.gz"
