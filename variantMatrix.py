@@ -1,7 +1,7 @@
 #! /home/jody/software/anaconda2/bin/python
 from __future__ import division
 import sys
-from collections import defaultdict
+from collections import defaultdict,Counter
 from tqdm import tqdm
 import argparse
 from scipy.stats import chisquare,fisher_exact
@@ -92,7 +92,32 @@ def load_bed(bedfile):
 			temp[arr[0]][str(i)] = arr[3]
 	return temp,loci,starts
 
-####### main functions ########
+def matRemoveMono(inFile,outFile):
+        def testMulti(line):
+                tempArr = line.split("\t")
+                for i in range(meta_col_num):
+                        tempArr.pop(0)
+                if len(set(tempArr) - set(["-","N","NA"]))>1:
+                        return True
+                else:
+                        return False
+
+        print "Removing Monomorphic variants"
+        o = open(outFile,"w")
+        with open(inFile) as f:
+                o.write(f.readline())
+                for i in tqdm(range(file_len(inFile)-1)):
+                        l = f.readline()
+                        if testMulti(l.rstrip()):
+                                o.write(l)
+
+
+
+##############################################
+############### main functions ###############
+##############################################
+
+
 def main_filter(args):
 	bed = bed2set(args.bed_file)
 	with open(args.out_file,"w") as o:
@@ -144,6 +169,9 @@ def main_binarise(args):
 					else:	
 						arr[i] = "0"
 				o.write("\t".join(arr)+"\n")	
+
+def main_remove_mono(args):
+	matRemoveMono(args.matrix,args.out_file)
 
 def main_snps2fasta(args):
 	print "Loading Matrix"
@@ -317,6 +345,12 @@ parser_sub.add_argument('matrix',help='Variant Matrix File')
 parser_sub.add_argument('out_file',help='Output File')
 parser_sub.set_defaults(func=main_binarise)
 
+parser_sub = subparsers.add_parser('remove_mono', help='Generate raw unfiltered matrix', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser_sub.add_argument('matrix',help='Variant Matrix File')
+parser_sub.add_argument('out_file',help='Output File')
+parser_sub.set_defaults(func=main_remove_mono)
+
+
 parser_sub = subparsers.add_parser('locus_sum', help='Generate raw unfiltered matrix', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_sub.add_argument('matrix',help='Variant Matrix File')
 parser_sub.add_argument('bed_file',help='BED File')
@@ -364,6 +398,8 @@ parser_sub.add_argument('--pretty',action='store_true')
 parser_sub.add_argument('--fisher',action='store_true')
 parser_sub.add_argument('--verbose',action='store_true')
 parser_sub.set_defaults(func=main_2by2)
+
+
 
 args = parser.parse_args()
 args.func(args)

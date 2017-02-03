@@ -44,9 +44,7 @@ def check_for_files(samples,base_dir):
 
 def parseVCF(samples,baseDir):
 	print "Loading VCFs"
-	setChr = set()
-	setPos = {}
-	variants = {}
+	temp_variants = defaultdict(dict)
 	for i in tqdm(range(len(samples))):
 		sample = samples[i]
 		f = gzip.open(baseDir+"/vcf/"+sample+".vcf.gz","rb")
@@ -54,27 +52,12 @@ def parseVCF(samples,baseDir):
 			if line[0] == "#":
 				continue
 			chr,pos,id,ref,alt,qual,filter,info,format,sample = line.rstrip().split("\t")
-			type = ""
-			if re.search("INDEL",line)==None:
-				type = "SNP"
-			elif len(ref)<len(alt):
-				type = "insertion"
-			elif len(ref)>len(alt):
-				type = "deletion"
-			else:
-				type = "unknown"
-
-			if chr not in setChr:
-				setChr.add(chr)
-				setPos[chr] = set()
-				variants[chr] = [{"pos":pos,"ref":ref,"alt":alt,"type":type}]
-			elif pos not in setPos[chr]:
-				setPos[chr].add(pos)
-				variants[chr].append({"pos":pos,"ref":ref,"alt":alt,"type":type})
+			temp_variants[chr][int(pos)] = {"pos":pos,"ref":ref,"alt":alt,"type":"."}
 		f.close()
-	for chrom in variants:
-		variants[chrom] = sorted(variants[chrom], key=lambda x: int(x["pos"]), reverse=False)
-
+	variants = defaultdict(list)
+	for chrom in temp_variants:
+		for pos in sorted(temp_variants[chrom].keys()):
+			variants[chrom].append(temp_variants[chrom][pos]) 
 	return variants
 
 
@@ -281,11 +264,6 @@ def filterVars(infile,outfile,na_cut,mx_cut):
 			arr = line.rstrip().split("\t")
 			pct_NA = dict_var_stats["na"][arr[0]][arr[1]]
 			pct_MX = dict_var_stats["mx"][arr[0]][arr[1]]
-			if arr[1]=="55553":
-				print "Cutoff: "+str(float(na_cut))
-				print pct_NA
-				print "Cutoff: "+str(float(mx_cut))
-				print pct_MX
 			if int(arr[1]) in dict_map[arr[0]]:
 				filtering_results["map"].append((arr[0],arr[1]))
 			elif float(pct_NA)>float(na_cut):
