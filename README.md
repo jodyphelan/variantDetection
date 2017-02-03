@@ -9,9 +9,8 @@ This is a toolkit to perform population based filtering of variants called from 
 ### Installation
 ```
 git clone --recursive https://github.com/jodyphelan/variantDetection.git
-cd variantDetection/htslib
-make
-cd ../
+cd variantDetection/
+bash install_prerequisites.sh
 ```
 
 ### Usage
