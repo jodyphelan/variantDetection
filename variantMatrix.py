@@ -6,6 +6,7 @@ from tqdm import tqdm
 import argparse
 from scipy.stats import chisquare,fisher_exact
 from subprocess import Popen,PIPE
+import re
 
 ######### global variables #########
 allele_start_col = 5
@@ -13,10 +14,9 @@ allele_start_col = 5
 
 ######### functions #########
 def file_len(fname):
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-    return i + 1
+	for l in Popen("wc -l %s" % (fname),shell=True,stdout=PIPE).stdout:
+		res = l.rstrip().split()[0]
+	return int(res)
 
 
 def bed2set(bedFile):
@@ -162,7 +162,7 @@ def main_binarise(args):
 				l = f.readline()
 				arr = l.rstrip().split()
 				for i in range(allele_start_col,len(arr)):
-					if arr[i]=="NA":
+					if arr[i]=="NA" or arr[i]=="N" or arr[i]=="-":
 						continue
 					elif arr[i]!=arr[2]:
 						arr[i] = "1"
@@ -182,8 +182,13 @@ def main_snps2fasta(args):
 			fa_dict = defaultdict(list)
 			for _ in tqdm(range(file_len(args.matrix)-1)):
 				l = f.readline()
+				if re.search("[+-]",l):
+					continue
 				arr = l.rstrip().split()
-				if arr[4]!="SNP":
+				alleles = set(arr[5:])
+				if "NA" in alleles:
+					alleles.remove("NA")
+				if len(alleles)==1:
 					continue
 				for i in range(allele_start_col,len(arr)):
 					if arr[i]=="NA":
@@ -313,7 +318,7 @@ def main_locus_agg(args):
 			for l in loci:
 				for s in header[5:]:
 					results[l][s] = "0"
-			for _ in tqdm(range(file_len(args.matrix)-1)):
+			for _ in range(file_len(args.matrix)-1):
 				line = f.readline()
 				if args.concat:
 					out.write(line)	
@@ -321,6 +326,9 @@ def main_locus_agg(args):
 				chrom,pos = arr[:2]
 				for i in range(5,len(arr)):
 					if arr[i]=="1":
+						print "pos: %s" % pos
+						print "locus: %s" % bed[chrom][pos]
+						print arr[:10]
 						results[bed[chrom][pos]][header[i]] = "1"
 		for l in loci:
 			o.write(starts[l][0]+"\t"+starts[l][1]+"\t.\t"+l+"\t"+"locus_sum"+"\t"+"\t".join([results[l][x] for x in header[5:]])+"\n")
